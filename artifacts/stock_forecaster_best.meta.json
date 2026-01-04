@@ -1,0 +1,36 @@
+{
+  "feature_cols": [
+    "Close",
+    "Volume",
+    "returns",
+    "hour_sin",
+    "hour_cos",
+    "dayofweek_sin",
+    "dayofweek_cos"
+  ],
+  "ticker": "SPY",
+  "interval": "1m",
+  "period": "7d",
+  "best_model": "nbeats",
+  "metrics": {
+    "lstm": {
+      "mae": 2.9823176860809326,
+      "rmse": 3.118748664855957,
+      "mape": 0.4371810257434845,
+      "r2": -3.476147174835205
+    },
+    "nbeats": {
+      "mae": 2.8953614234924316,
+      "rmse": 3.248913049697876,
+      "mape": 0.4242970645427704,
+      "r2": -3.8575778007507324
+    }
+  },
+  "nbeats_member_paths": [
+    "artifacts\\nbeats_member_0.keras",
+    "artifacts\\nbeats_member_1.keras",
+    "artifacts\\nbeats_member_2.keras",
+    "artifacts\\nbeats_member_3.keras",
+    "artifacts\\nbeats_member_4.keras"
+  ]
+}
