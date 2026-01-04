@@ -2,10 +2,24 @@ from __future__ import annotations
 
 from typing import Optional, Tuple
 
+import requests
 import pandas as pd
 import yfinance as yf
 
 from . import config
+
+
+def _yf_session() -> requests.Session:
+    """
+    Build a requests session with a stable user agent.
+
+    Streamlit Cloud occasionally blocks yfinance's rotating/impersonated
+    agents; a consistent UA avoids the "Impersonating chrome136 is not
+    supported" error.
+    """
+    session = requests.Session()
+    session.headers.update({"User-Agent": "Mozilla/5.0 (compatible; StockForecaster/1.0)"})
+    return session
 
 
 def _strip_timezone(index: pd.Index) -> pd.Index:
@@ -29,18 +43,29 @@ def fetch_stock_history(
     is the largest history yfinance exposes for 1m bars in a single request.
     """
     period, start, end = _sanitize_request(period, interval, start, end)
-    df = yf.download(
-        tickers=ticker,
-        period=period,
-        interval=interval,
-        start=start,
-        end=end,
-        auto_adjust=True,
-        progress=False,
-        threads=True,
-    )
+    session = _yf_session()
+    try:
+        df = yf.download(
+            tickers=ticker,
+            period=period,
+            interval=interval,
+            start=start,
+            end=end,
+            auto_adjust=True,
+            progress=False,
+            threads=True,
+            session=session,
+        )
+    except Exception as exc:
+        raise RuntimeError(
+            f"Failed to download data for {ticker} (period={period}, interval={interval}): {exc}. "
+            "Try a coarser interval like 5m/2m or a shorter period."
+        ) from exc
     if df.empty:
-        raise RuntimeError(f"No data returned for {ticker} with period={period}, interval={interval}")
+        raise RuntimeError(
+            f"No data returned for {ticker} with period={period}, interval={interval}. "
+            "Try a coarser interval like 5m/2m or a shorter period."
+        )
 
     df.index = _strip_timezone(df.index)
     df = df[["Open", "High", "Low", "Close", "Volume"]].dropna()
@@ -94,7 +119,9 @@ def _sanitize_request(
 
 def latest_price(ticker: str = config.TICKER) -> float:
     """Get the most recent close price using a lightweight request."""
-    snapshot = yf.download(ticker, period="1d", interval="1m", progress=False)
+    snapshot = yf.download(
+        ticker, period="1d", interval="1m", progress=False, session=_yf_session(), threads=True
+    )
     snapshot.index = _strip_timezone(snapshot.index)
     if snapshot.empty:
         raise RuntimeError(f"Unable to retrieve latest price for {ticker}")

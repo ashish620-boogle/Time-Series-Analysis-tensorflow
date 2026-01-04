@@ -209,8 +209,13 @@ def app():
         st.session_state.prediction_target_minute = None
 
     if st.session_state.data is None or params_changed:
-        st.session_state.data = load_data(ticker=ticker, period=period, interval=interval)
-        st.session_state.data_params = data_params
+        try:
+            st.session_state.data = load_data(ticker=ticker, period=period, interval=interval)
+            st.session_state.data_params = data_params
+        except Exception as exc:
+            st.error(f"Data fetch failed: {exc}")
+            st.info("Try interval '5m' or '2m', shorten the period, then click 'Load latest data'.")
+            st.stop()
     data = st.session_state.data
     st.session_state.last_data_timestamp = data.index[-1]
     st.sidebar.caption(
